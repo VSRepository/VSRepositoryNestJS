@@ -1,0 +1,82 @@
+{
+  "name": "@vsrepo/nestjs",
+  "version": "0.1.0",
+  "author": {
+    "email": "joaodev.azevedo@outlook.com",
+    "url": "https://github.com/jaobrabo123",
+    "name": "João Pedro Azevedo Freire Mecenas"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VSRepository/VSRepositoryNestJS.git"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "bugs": {
+    "email": "joaodev.azevedo@outlook.com",
+    "url": "https://github.com/VSRepository/VSRepositoryNestJS/issues"
+  },
+  "description": "NestJS module for VSRepository",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.pt-BR.md",
+    "CHANGELOG.md"
+  ],
+  "homepage": "https://github.com/VSRepository/VSRepositoryNestJS#readme",
+  "keywords": [
+    "nestjs",
+    "repository",
+    "orm",
+    "typescript",
+    "repository-pattern",
+    "vsrepo",
+    "vsrepository",
+    "adapter"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
+    "build": "bun run clean && tsc -p tsconfig.build.json",
+    "prepack": "bun run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --type-aware src/ test/",
+    "lint:fix": "oxlint --fix src/ test/",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:docs": "prettier --write \"./*.md\"",
+    "format:docs:check": "prettier --check \"./*.md\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "full-validation": "bun run typecheck && bun run lint && bun run format:check && bun run test"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "@vsrepo/prisma7-adapter": "^2.0.0-dev.2",
+    "dotenv": "^18.0.10",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.5 || ^12.0.0",
+    "@nestjs/core": "^11.0.5 || ^12.0.0",
+    "vsrepo": "^3.0.0-dev.3"
+  }
+}
