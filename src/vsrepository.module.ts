@@ -1,60 +1,91 @@
-import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
-import { VSRepoAdapter, VSRepository } from "vsrepo";
+import { DynamicModule, Module, Provider } from "@nestjs/common";
+import { VSRepoAdapter, VSRepoAdapterConstructor, VSRepoGlobalConfig, VSRepository } from "vsrepo";
 import {
-    AdapterArgs,
-    AdapterConstructor,
-    VSRepositoryFeature,
+    PartialVSRepositoryModuleOptions,
     VSRepositoryModuleAsyncOptions,
     VSRepositoryModuleOptions,
     VSRepositoryOptionsFactory,
 } from "./types.js";
-import { ADAPTER_CLASS, DB_CLIENT, VSREPOSITORY_OPTIONS } from "./constants.js";
-import { getAdapterToken } from "./utils.js";
+import {
+    getAdapterClassToken,
+    getAdapterToken,
+    getDbClientToken,
+    getVSRepoConfigToken,
+    getVSRepoModuleOptionsToken,
+} from "./utils.js";
 
-@Global()
 @Module({})
 export class VSRepositoryModule {
-    private static configureAdapter<T extends AdapterConstructor>(options: VSRepositoryModuleOptions<T>): T {
-        const { dbClient: _, adapter, adapterConfig, ...vsrepoConfig } = options;
+    private static configureAdapter<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleOptions<T>): T {
+        const { dbClient: _, contextName: _1, lazyConfig, adapter, adapterConfig, ...vsrepoConfig } = options;
 
-        VSRepository.setGlobalConfig(vsrepoConfig);
+        if (!lazyConfig) {
+            VSRepository.setGlobalConfig(vsrepoConfig);
 
-        if (adapterConfig !== undefined) {
-            adapter.setGlobalConfig?.(adapterConfig);
+            if (adapterConfig !== undefined) {
+                adapter.setGlobalConfig?.(adapterConfig);
+            }
         }
 
         return adapter;
     }
 
-    static forRoot<T extends AdapterConstructor>(options: VSRepositoryModuleOptions<T>): DynamicModule {
+    static forRoot<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleOptions<T>): DynamicModule {
+        const adapterClassToken = getAdapterClassToken(options.contextName);
+        const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
+        const dbClientToken = getDbClientToken(options.contextName);
+        const VSRepoConfigToken = getVSRepoConfigToken(options.contextName);
+
         return {
             module: VSRepositoryModule,
             providers: [
                 {
-                    provide: VSREPOSITORY_OPTIONS,
+                    provide: VSRepoModuleOptionsToken,
                     useValue: options,
                 },
                 {
-                    provide: ADAPTER_CLASS,
-                    inject: [VSREPOSITORY_OPTIONS],
+                    provide: adapterClassToken,
+                    inject: [VSRepoModuleOptionsToken],
                     useFactory: (config: VSRepositoryModuleOptions<T>) => this.configureAdapter(config),
                 },
                 {
-                    provide: DB_CLIENT,
-                    inject: [VSREPOSITORY_OPTIONS],
+                    provide: dbClientToken,
+                    inject: [VSRepoModuleOptionsToken],
                     useFactory: (config: VSRepositoryModuleOptions<T>) => config.dbClient,
                 },
+                {
+                    provide: VSRepoConfigToken,
+                    inject: [VSRepoModuleOptionsToken],
+                    useFactory: ({
+                        lazyDynamicMethods,
+                        logLevel,
+                        mergeConfig,
+                        softDeleteField,
+                        vsPlaceholders,
+                    }: VSRepositoryModuleOptions<T>): VSRepoGlobalConfig => ({
+                        lazyDynamicMethods,
+                        logLevel,
+                        mergeConfig,
+                        softDeleteField,
+                        vsPlaceholders,
+                    }),
+                },
             ],
-            exports: [ADAPTER_CLASS, DB_CLIENT],
+            exports: [adapterClassToken, dbClientToken, VSRepoConfigToken, VSRepoModuleOptionsToken],
+            global: true,
         };
     }
 
-    static forRootAsync<T extends AdapterConstructor>(options: VSRepositoryModuleAsyncOptions<T>): DynamicModule {
+    static forRootAsync<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleAsyncOptions<T>): DynamicModule {
+        const adapterClassToken = getAdapterClassToken(options.contextName);
+        const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
+        const dbClientToken = getDbClientToken(options.contextName);
+        const VSRepoConfigToken = getVSRepoConfigToken(options.contextName);
         const providers = [];
 
         if (options.useFactory) {
             providers.push({
-                provide: VSREPOSITORY_OPTIONS,
+                provide: VSRepoModuleOptionsToken,
                 useFactory: options.useFactory,
                 inject: options.inject ?? [],
             });
@@ -65,14 +96,14 @@ export class VSRepositoryModule {
                     useClass: options.useClass,
                 },
                 {
-                    provide: VSREPOSITORY_OPTIONS,
+                    provide: VSRepoModuleOptionsToken,
                     useFactory: (factory: VSRepositoryOptionsFactory<T>) => factory.createVSRepositoryOptions(),
                     inject: [options.useClass],
                 },
             );
         } else if (options.useExisting) {
             providers.push({
-                provide: VSREPOSITORY_OPTIONS,
+                provide: VSRepoModuleOptionsToken,
                 useFactory: (factory: VSRepositoryOptionsFactory<T>) => factory.createVSRepositoryOptions(),
                 inject: [options.useExisting],
             });
@@ -82,14 +113,31 @@ export class VSRepositoryModule {
 
         providers.push(
             {
-                provide: ADAPTER_CLASS,
-                useFactory: (config: VSRepositoryModuleOptions<T>) => this.configureAdapter(config),
-                inject: [VSREPOSITORY_OPTIONS],
+                provide: adapterClassToken,
+                inject: [VSRepoModuleOptionsToken],
+                useFactory: (config: PartialVSRepositoryModuleOptions<T>) => this.configureAdapter(config),
             },
             {
-                provide: DB_CLIENT,
-                inject: [VSREPOSITORY_OPTIONS],
-                useFactory: (config: VSRepositoryModuleOptions<T>) => config.dbClient,
+                provide: dbClientToken,
+                inject: [VSRepoModuleOptionsToken],
+                useFactory: (config: PartialVSRepositoryModuleOptions<T>) => config.dbClient,
+            },
+            {
+                provide: VSRepoConfigToken,
+                inject: [VSRepoModuleOptionsToken],
+                useFactory: ({
+                    lazyDynamicMethods,
+                    logLevel,
+                    mergeConfig,
+                    softDeleteField,
+                    vsPlaceholders,
+                }: PartialVSRepositoryModuleOptions<T>): VSRepoGlobalConfig => ({
+                    lazyDynamicMethods,
+                    logLevel,
+                    mergeConfig,
+                    softDeleteField,
+                    vsPlaceholders,
+                }),
             },
         );
 
@@ -97,41 +145,78 @@ export class VSRepositoryModule {
             module: VSRepositoryModule,
             imports: options.imports ?? [],
             providers,
-            exports: [ADAPTER_CLASS, DB_CLIENT],
+            exports: [adapterClassToken, dbClientToken, VSRepoConfigToken, VSRepoModuleOptionsToken],
+            global: true,
         };
     }
 
-    static forFeature<T = readonly unknown[]>(entityName: string, ...adapterArgs: AdapterArgs<T>): DynamicModule;
-    static forFeature<T = readonly unknown[]>(features: readonly VSRepositoryFeature<T>[]): DynamicModule;
-    static forFeature<T = readonly unknown[]>(
-        entityOrFeatures: string | readonly VSRepositoryFeature<T>[],
-        ...adapterArgs: AdapterArgs<T>
+    static forFeature<T extends object>(config: T, contextName?: string): DynamicModule;
+    static forFeature<T extends object>(entityName: string, config: T, contextName?: string): DynamicModule;
+    static forFeature<T extends object>(
+        entityNameOrConfig: string | T,
+        configOrContextName?: T | string,
+        contextName?: string,
     ): DynamicModule {
-        const singleFeat = typeof entityOrFeatures === "string";
-        const features = singleFeat ? [{ entityName: entityOrFeatures, adapterArgs }] : entityOrFeatures;
+        const providers: Provider[] = [];
+        const exports = [];
 
-        const providers: Provider[] = features.map(({ entityName, adapterArgs }) => ({
-            provide: getAdapterToken(entityName),
-            inject: [ADAPTER_CLASS, DB_CLIENT],
-            useFactory: (Adapter: AdapterConstructor, dbClient: any) => new Adapter(dbClient, ...adapterArgs),
-        }));
+        if (typeof entityNameOrConfig === "string") {
+            if (!configOrContextName) throw new Error("The config param must be provided.");
+            if (typeof configOrContextName === "string") throw new Error("The contextName param must be the last.");
 
-        if (singleFeat) {
+            const adaterToken = getAdapterToken(entityNameOrConfig, contextName);
+            const adapterClassToken = getAdapterClassToken(contextName);
+            const dbClientToken = getDbClientToken(contextName);
+            const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(contextName);
+
+            exports.push(adaterToken);
+
+            providers.push({
+                provide: adaterToken,
+                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken],
+                useFactory: (
+                    Adapter: VSRepoAdapterConstructor,
+                    dbClient: any,
+                    config: VSRepositoryModuleOptions<any>,
+                ) =>
+                    new Adapter(
+                        dbClient,
+                        config.adapterConfig && config.lazyConfig
+                            ? { ...config.adapterConfig, ...configOrContextName }
+                            : configOrContextName,
+                    ),
+            });
+        } else {
+            if (configOrContextName !== undefined && typeof configOrContextName !== "string")
+                throw new Error("The contextName param must be a string.");
+
+            const adapterClassToken = getAdapterClassToken(configOrContextName);
+            const dbClientToken = getDbClientToken(configOrContextName);
+            const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(configOrContextName);
+
+            exports.push(VSRepoAdapter);
+
             providers.push({
                 provide: VSRepoAdapter,
-                useExisting: getAdapterToken(entityOrFeatures),
+                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken],
+                useFactory: (
+                    Adapter: VSRepoAdapterConstructor,
+                    dbClient: any,
+                    config: VSRepositoryModuleOptions<any>,
+                ) =>
+                    new Adapter(
+                        dbClient,
+                        config.adapterConfig && config.lazyConfig
+                            ? { ...config.adapterConfig, ...entityNameOrConfig }
+                            : entityNameOrConfig,
+                    ),
             });
         }
 
         return {
             module: VSRepositoryModule,
             providers,
-            exports: [
-                ...features.map(({ entityName }) => getAdapterToken(entityName)),
-                ...(singleFeat ? [VSRepoAdapter] : []),
-            ],
+            exports,
         };
     }
 }
-
-// const a = VSRepositoryModule.forRootAsync({useFactory: ()=> ({})})

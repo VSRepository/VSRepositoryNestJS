@@ -1,31 +1,30 @@
 import type { DynamicModule, Type } from "@nestjs/common";
-import type { VSRepoAdapter, VSRepoGlobalConfig } from "vsrepo";
+import type { VSRepoAdapterConstructor, VSRepoGlobalConfig } from "vsrepo";
 
-export interface AdapterConstructor extends Type<VSRepoAdapter<any>> {
-    setGlobalConfig?(config: unknown): void;
-}
-
-export interface VSRepositoryModuleOptions<T extends AdapterConstructor> extends VSRepoGlobalConfig {
+export interface VSRepositoryModuleOptions<T extends VSRepoAdapterConstructor> extends VSRepoGlobalConfig {
     adapter: T;
     adapterConfig?: T extends { setGlobalConfig(config: infer C): void } ? C : undefined;
     dbClient: any;
+    contextName?: string;
+    lazyConfig?: boolean;
 }
 
-export interface VSRepositoryOptionsFactory<T extends AdapterConstructor> {
-    createVSRepositoryOptions(): VSRepositoryModuleOptions<T> | Promise<VSRepositoryModuleOptions<T>>;
+export interface PartialVSRepositoryModuleOptions<T extends VSRepoAdapterConstructor> extends Omit<
+    VSRepositoryModuleOptions<T>,
+    "contextName"
+> {}
+
+export type MaybePromise<T> = T | Promise<T>;
+
+export interface VSRepositoryOptionsFactory<T extends VSRepoAdapterConstructor> {
+    createVSRepositoryOptions(): MaybePromise<PartialVSRepositoryModuleOptions<T>>;
 }
 
-export interface VSRepositoryModuleAsyncOptions<T extends AdapterConstructor> {
+export interface VSRepositoryModuleAsyncOptions<T extends VSRepoAdapterConstructor> {
+    contextName?: string;
     imports?: DynamicModule["imports"];
     inject?: any[];
-    useFactory?: (...args: any[]) => Promise<VSRepositoryModuleOptions<T>> | VSRepositoryModuleOptions<T>;
+    useFactory?: (...args: any[]) => MaybePromise<PartialVSRepositoryModuleOptions<T>>;
     useClass?: Type<VSRepositoryOptionsFactory<T>>;
     useExisting?: Type<VSRepositoryOptionsFactory<T>>;
-}
-
-export type AdapterArgs<T> = T extends readonly unknown[] ? T : [T];
-
-export interface VSRepositoryFeature<T> {
-    entityName: string;
-    adapterArgs: AdapterArgs<T>;
 }

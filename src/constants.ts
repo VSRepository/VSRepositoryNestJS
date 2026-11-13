@@ -1,3 +1,4 @@
 export const ADAPTER_CLASS = Symbol("ADAPTER_CLASS");
-export const VSREPOSITORY_OPTIONS = Symbol("VSREPOSITORY_OPTIONS");
+export const MODULE_OPTIONS = Symbol("VSREPO_MODULE_OPTIONS");
 export const DB_CLIENT = Symbol("DB_CLIENT");
+export const VSREPO_CONFIG = Symbol("VSREPO_CONFIG");

@@ -77,6 +77,6 @@
   "peerDependencies": {
     "@nestjs/common": "^11.0.5 || ^12.0.0",
     "@nestjs/core": "^11.0.5 || ^12.0.0",
-    "vsrepo": "^3.0.0-dev.3"
+    "vsrepo": "^3.0.0-dev.4"
   }
 }
