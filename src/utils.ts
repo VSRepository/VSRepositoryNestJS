@@ -20,6 +20,8 @@ export function getDbClientToken(contextName?: string): string | symbol {
     return contextName ? `DbClient(${contextName})` : DB_CLIENT;
 }
 
+export const InjectDbClient = (contextName?: string) => Inject(getDbClientToken(contextName));
+
 export function getVSRepoConfigToken(contextName?: string): string | symbol {
     return contextName ? `VSRepoConfig(${contextName})` : VSREPO_CONFIG;
 }

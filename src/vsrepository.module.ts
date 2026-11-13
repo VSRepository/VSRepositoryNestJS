@@ -164,15 +164,15 @@ export class VSRepositoryModule {
             if (!configOrContextName) throw new Error("The config param must be provided.");
             if (typeof configOrContextName === "string") throw new Error("The contextName param must be the last.");
 
-            const adaterToken = getAdapterToken(entityNameOrConfig, contextName);
+            const adapterToken = getAdapterToken(entityNameOrConfig, contextName);
             const adapterClassToken = getAdapterClassToken(contextName);
             const dbClientToken = getDbClientToken(contextName);
             const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(contextName);
 
-            exports.push(adaterToken);
+            exports.push(adapterToken);
 
             providers.push({
-                provide: adaterToken,
+                provide: adapterToken,
                 inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken],
                 useFactory: (
                     Adapter: VSRepoAdapterConstructor,

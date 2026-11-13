@@ -4,7 +4,7 @@ import type { VSRepoAdapterConstructor, VSRepoGlobalConfig } from "vsrepo";
 export interface VSRepositoryModuleOptions<T extends VSRepoAdapterConstructor> extends VSRepoGlobalConfig {
     adapter: T;
     adapterConfig?: T extends { setGlobalConfig(config: infer C): void } ? C : undefined;
-    dbClient: any;
+    dbClient: ConstructorParameters<T>[0];
     contextName?: string;
     lazyConfig?: boolean;
 }
