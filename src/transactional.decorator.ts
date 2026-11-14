@@ -15,6 +15,9 @@ import { getDbClientToken } from "./utils.js";
  *   awaited) would use a transaction that already ended.
  * - Only the repositories of the context take part. A db client used directly doesn't.
  *
+ * @param options `isolationLevel` and `timeoutMs` of the transaction, and the `contextName` it runs
+ * in. They are ignored when the method joins a transaction that is already active.
+ *
  * @example
  * ```typescript
  * *@Transactional({ isolationLevel: VSRepoIsolationLevel.SERIALIZABLE })
@@ -23,6 +26,8 @@ import { getDbClientToken } from "./utils.js";
  *     await this.itemsRepository.createMany(dto.items.map(item => ({ ...item, orderId: order.id })));
  * }
  * ```
+ *
+ * @publicApi
  */
 export function Transactional(options: TransactionalOptions = {}): MethodDecorator {
     const { contextName, ...transactionOptions } = options;

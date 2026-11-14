@@ -16,6 +16,30 @@ import {
     getVSRepoModuleOptionsToken,
 } from "./utils.js";
 
+/**
+ * NestJS module for VSRepository. `forRoot()`/`forRootAsync()` register a context (its db client and
+ * adapter class) and `forFeature()` provides the adapter of each entity, so repositories receive
+ * them through dependency injection.
+ *
+ * A **context** is a database: use the default one (no `contextName`), or name each one to work
+ * with several in the same application.
+ *
+ * @example
+ * ```typescript
+ * *@Module({
+ *     imports: [VSRepositoryModule.forRoot({ adapter: Prisma7Adapter, dbClient: prisma }), UserModule],
+ * })
+ * export class AppModule {}
+ *
+ * *@Module({
+ *     imports: [VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" })],
+ *     providers: [UserRepository],
+ * })
+ * export class UserModule {}
+ * ```
+ *
+ * @publicApi
+ */
 @Module({})
 export class VSRepositoryModule {
     private static configureAdapter<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleOptions<T>): T {
@@ -32,6 +56,29 @@ export class VSRepositoryModule {
         return adapter;
     }
 
+    /**
+     * Registers a context: its db client, its adapter class and its `VSRepository` config. The module
+     * is global, so it is imported once (usually in the root module) and the context is available
+     * everywhere.
+     *
+     * Without `lazyConfig`, the config is applied through the static `VSRepository.setGlobalConfig()`
+     * and `adapter.setGlobalConfig()` when the module initializes, before any repository is created.
+     * Those are process-wide and each call replaces the previous one, so with several contexts the last
+     * one wins: set `lazyConfig: true` on them to leave the static config alone.
+     *
+     * @param options Adapter class, db client, config and, optionally, the name of the context.
+     *
+     * @example
+     * ```typescript
+     * VSRepositoryModule.forRoot({
+     *     adapter: Prisma7Adapter,
+     *     dbClient: prisma,
+     *     logLevel: VSLogLevel.WARN,
+     * })
+     * ```
+     *
+     * @publicApi
+     */
     static forRoot<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleOptions<T>): DynamicModule {
         const adapterClassToken = getAdapterClassToken(options.contextName);
         const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
@@ -60,18 +107,13 @@ export class VSRepositoryModule {
                     provide: VSRepoConfigToken,
                     inject: [VSRepoModuleOptionsToken],
                     useFactory: ({
-                        lazyDynamicMethods,
-                        logLevel,
-                        mergeConfig,
-                        softDeleteField,
-                        vsPlaceholders,
-                    }: VSRepositoryModuleOptions<T>): VSRepoGlobalConfig => ({
-                        lazyDynamicMethods,
-                        logLevel,
-                        mergeConfig,
-                        softDeleteField,
-                        vsPlaceholders,
-                    }),
+                        adapter: _0,
+                        dbClient: _1,
+                        adapterConfig: _2,
+                        contextName: _3,
+                        lazyConfig: _4,
+                        ...config
+                    }: VSRepositoryModuleOptions<T>): VSRepoGlobalConfig => config,
                 },
                 {
                     provide: transactionManagerToken,
@@ -89,6 +131,27 @@ export class VSRepositoryModule {
         };
     }
 
+    /**
+     * Same as `forRoot()`, but the options come from a factory, so they can depend on other providers
+     * (e.g. a config service) and be built asynchronously. The module is global.
+     *
+     * @param options Where the options come from (`useFactory`, `useClass` or `useExisting`) and,
+     * optionally, the name of the context.
+     *
+     * @example
+     * ```typescript
+     * VSRepositoryModule.forRootAsync({
+     *     imports: [ConfigModule],
+     *     inject: [ConfigService],
+     *     useFactory: (config: ConfigService) => ({
+     *         adapter: Prisma7Adapter,
+     *         dbClient: new PrismaClient({ adapter: new PrismaPg(config.getOrThrow("DATABASE_URL")) }),
+     *     }),
+     * })
+     * ```
+     *
+     * @publicApi
+     */
     static forRootAsync<T extends VSRepoAdapterConstructor>(options: VSRepositoryModuleAsyncOptions<T>): DynamicModule {
         const adapterClassToken = getAdapterClassToken(options.contextName);
         const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
@@ -140,18 +203,12 @@ export class VSRepositoryModule {
                 provide: VSRepoConfigToken,
                 inject: [VSRepoModuleOptionsToken],
                 useFactory: ({
-                    lazyDynamicMethods,
-                    logLevel,
-                    mergeConfig,
-                    softDeleteField,
-                    vsPlaceholders,
-                }: PartialVSRepositoryModuleOptions<T>): VSRepoGlobalConfig => ({
-                    lazyDynamicMethods,
-                    logLevel,
-                    mergeConfig,
-                    softDeleteField,
-                    vsPlaceholders,
-                }),
+                    adapter: _0,
+                    dbClient: _1,
+                    adapterConfig: _2,
+                    lazyConfig: _3,
+                    ...config
+                }: PartialVSRepositoryModuleOptions<T>): VSRepoGlobalConfig => config,
             },
             {
                 provide: transactionManagerToken,
@@ -174,7 +231,37 @@ export class VSRepositoryModule {
         };
     }
 
+    /**
+     * Provides the **unnamed** adapter of the module, to inject with `VSRepoAdapter`. A module
+     * can have only one: use `forFeature(entityName, config)` for modules with several entities.
+     *
+     * The adapter is created with the db client of the context and is transaction-aware, so
+     * `@Transactional()` works with the repositories that use it.
+     *
+     * @param config Constructor config of the adapter (e.g. `{ modelName, pkName }` for Prisma).
+     * @param contextName Context to use. Omit it for the default context.
+     *
+     * @publicApi
+     */
     static forFeature<T extends object>(config: T, contextName?: string): DynamicModule;
+    /**
+     * Provides the adapter of an entity under its name, to inject with `@InjectAdapter(entityName)`.
+     * A module can provide several, one per entity.
+     *
+     * The adapter is created with the db client of the context and is transaction-aware, so
+     * `@Transactional()` works with the repositories that use it.
+     *
+     * @param entityName Name of the entity, used to inject its adapter.
+     * @param config Constructor config of the adapter (e.g. `{ modelName, pkName }` for Prisma).
+     * @param contextName Context to use. Omit it for the default context.
+     *
+     * @example
+     * ```typescript
+     * VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting")
+     * ```
+     *
+     * @publicApi
+     */
     static forFeature<T extends object>(entityName: string, config: T, contextName?: string): DynamicModule;
     static forFeature<T extends object>(
         entityNameOrConfig: string | T,
