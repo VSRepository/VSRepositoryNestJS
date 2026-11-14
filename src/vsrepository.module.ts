@@ -1,5 +1,6 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common";
 import { VSRepoAdapter, VSRepoAdapterConstructor, VSRepoGlobalConfig, VSRepository } from "vsrepo";
+import { createTransactionManager, VSRepoTransactionManager } from "./transaction-manager.js";
 import {
     PartialVSRepositoryModuleOptions,
     VSRepositoryModuleAsyncOptions,
@@ -10,6 +11,7 @@ import {
     getAdapterClassToken,
     getAdapterToken,
     getDbClientToken,
+    getTransactionManagerToken,
     getVSRepoConfigToken,
     getVSRepoModuleOptionsToken,
 } from "./utils.js";
@@ -35,6 +37,7 @@ export class VSRepositoryModule {
         const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
         const dbClientToken = getDbClientToken(options.contextName);
         const VSRepoConfigToken = getVSRepoConfigToken(options.contextName);
+        const transactionManagerToken = getTransactionManagerToken(options.contextName);
 
         return {
             module: VSRepositoryModule,
@@ -70,8 +73,18 @@ export class VSRepositoryModule {
                         vsPlaceholders,
                     }),
                 },
+                {
+                    provide: transactionManagerToken,
+                    useFactory: () => createTransactionManager(dbClientToken),
+                },
             ],
-            exports: [adapterClassToken, dbClientToken, VSRepoConfigToken, VSRepoModuleOptionsToken],
+            exports: [
+                adapterClassToken,
+                dbClientToken,
+                VSRepoConfigToken,
+                VSRepoModuleOptionsToken,
+                transactionManagerToken,
+            ],
             global: true,
         };
     }
@@ -81,6 +94,7 @@ export class VSRepositoryModule {
         const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(options.contextName);
         const dbClientToken = getDbClientToken(options.contextName);
         const VSRepoConfigToken = getVSRepoConfigToken(options.contextName);
+        const transactionManagerToken = getTransactionManagerToken(options.contextName);
         const providers = [];
 
         if (options.useFactory) {
@@ -139,13 +153,23 @@ export class VSRepositoryModule {
                     vsPlaceholders,
                 }),
             },
+            {
+                provide: transactionManagerToken,
+                useFactory: () => createTransactionManager(dbClientToken),
+            },
         );
 
         return {
             module: VSRepositoryModule,
             imports: options.imports ?? [],
             providers,
-            exports: [adapterClassToken, dbClientToken, VSRepoConfigToken, VSRepoModuleOptionsToken],
+            exports: [
+                adapterClassToken,
+                dbClientToken,
+                VSRepoConfigToken,
+                VSRepoModuleOptionsToken,
+                transactionManagerToken,
+            ],
             global: true,
         };
     }
@@ -168,23 +192,30 @@ export class VSRepositoryModule {
             const adapterClassToken = getAdapterClassToken(contextName);
             const dbClientToken = getDbClientToken(contextName);
             const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(contextName);
+            const transactionManagerToken = getTransactionManagerToken(contextName);
 
             exports.push(adapterToken);
 
             providers.push({
                 provide: adapterToken,
-                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken],
+                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken, transactionManagerToken],
                 useFactory: (
                     Adapter: VSRepoAdapterConstructor,
                     dbClient: any,
                     config: VSRepositoryModuleOptions<any>,
-                ) =>
-                    new Adapter(
+                    transactionManager: VSRepoTransactionManager,
+                ) => {
+                    const adapter = new Adapter(
                         dbClient,
                         config.adapterConfig && config.lazyConfig
                             ? { ...config.adapterConfig, ...configOrContextName }
                             : configOrContextName,
-                    ),
+                    );
+
+                    transactionManager.attach(adapter);
+
+                    return adapter;
+                },
             });
         } else {
             if (configOrContextName !== undefined && typeof configOrContextName !== "string")
@@ -193,23 +224,30 @@ export class VSRepositoryModule {
             const adapterClassToken = getAdapterClassToken(configOrContextName);
             const dbClientToken = getDbClientToken(configOrContextName);
             const VSRepoModuleOptionsToken = getVSRepoModuleOptionsToken(configOrContextName);
+            const transactionManagerToken = getTransactionManagerToken(configOrContextName);
 
             exports.push(VSRepoAdapter);
 
             providers.push({
                 provide: VSRepoAdapter,
-                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken],
+                inject: [adapterClassToken, dbClientToken, VSRepoModuleOptionsToken, transactionManagerToken],
                 useFactory: (
                     Adapter: VSRepoAdapterConstructor,
                     dbClient: any,
                     config: VSRepositoryModuleOptions<any>,
-                ) =>
-                    new Adapter(
+                    transactionManager: VSRepoTransactionManager,
+                ) => {
+                    const adapter = new Adapter(
                         dbClient,
                         config.adapterConfig && config.lazyConfig
                             ? { ...config.adapterConfig, ...entityNameOrConfig }
                             : entityNameOrConfig,
-                    ),
+                    );
+
+                    transactionManager.attach(adapter);
+
+                    return adapter;
+                },
             });
         }
 

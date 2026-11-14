@@ -1,5 +1,5 @@
 import { Inject } from "@nestjs/common";
-import { ADAPTER_CLASS, DB_CLIENT, MODULE_OPTIONS, VSREPO_CONFIG } from "./constants.js";
+import { ADAPTER_CLASS, DB_CLIENT, MODULE_OPTIONS, TRANSACTION_MANAGER, VSREPO_CONFIG } from "./constants.js";
 
 export function getAdapterToken(entityName: string, contextName?: string): string {
     return `VSRepoAdapter(${entityName}${contextName ? `:${contextName}` : ""})`;
@@ -27,3 +27,9 @@ export function getVSRepoConfigToken(contextName?: string): string | symbol {
 }
 
 export const InjectVSRepoConfig = (contextName?: string) => Inject(getVSRepoConfigToken(contextName));
+
+export function getTransactionManagerToken(contextName?: string): string | symbol {
+    return contextName ? `VSRepoTransactionManager(${contextName})` : TRANSACTION_MANAGER;
+}
+
+export const InjectTransactionManager = (contextName?: string) => Inject(getTransactionManagerToken(contextName));

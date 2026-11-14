@@ -1,5 +1,5 @@
 import type { DynamicModule, Type } from "@nestjs/common";
-import type { VSRepoAdapterConstructor, VSRepoGlobalConfig } from "vsrepo";
+import type { VSRepoAdapterConstructor, VSRepoGlobalConfig, VSRepoTransactionOptions } from "vsrepo";
 
 export interface VSRepositoryModuleOptions<T extends VSRepoAdapterConstructor> extends VSRepoGlobalConfig {
     adapter: T;
@@ -27,4 +27,9 @@ export interface VSRepositoryModuleAsyncOptions<T extends VSRepoAdapterConstruct
     useFactory?: (...args: any[]) => MaybePromise<PartialVSRepositoryModuleOptions<T>>;
     useClass?: Type<VSRepositoryOptionsFactory<T>>;
     useExisting?: Type<VSRepositoryOptionsFactory<T>>;
+}
+
+export interface TransactionalOptions extends VSRepoTransactionOptions {
+    /** Context whose repositories take part in the transaction. Defaults to the default context. */
+    contextName?: string;
 }
