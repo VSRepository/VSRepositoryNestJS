@@ -1,5 +1,13 @@
 import type { DynamicModule, Type } from "@nestjs/common";
-import type { VSRepoAdapterConstructor, VSRepoGlobalConfig, VSRepoTransactionOptions } from "vsrepo";
+import type {
+    VSRepoAdapter,
+    VSRepoAdapterConstructor,
+    VSRepoConfig,
+    VSRepoGlobalConfig,
+    VSRepoOrmTypes,
+    VSRepository,
+    VSRepoTransactionOptions,
+} from "vsrepo";
 
 export interface VSRepositoryModuleOptions<T extends VSRepoAdapterConstructor> extends VSRepoGlobalConfig {
     adapter: T;
@@ -33,3 +41,10 @@ export interface TransactionalOptions extends VSRepoTransactionOptions {
     /** Context whose repositories take part in the transaction. Defaults to the default context. */
     contextName?: string;
 }
+
+export interface VSRepositoryBaseConstructor<E, PK, Orm extends VSRepoOrmTypes = VSRepoOrmTypes> extends Function {
+    new (adapter: VSRepoAdapter<E>, config: VSRepoGlobalConfig): VSRepository<E, PK, Orm> & { onModuleInit(): void };
+}
+
+export type VSRepositoryBaseOptions<T, K> = Omit<Partial<VSRepoConfig<T, K>>, "adapter"> &
+    ({ entityName?: string; contextName?: undefined } | { entityName: string; contextName?: string });
