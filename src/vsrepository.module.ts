@@ -117,7 +117,9 @@ export class VSRepositoryModule {
                 },
                 {
                     provide: transactionManagerToken,
-                    useFactory: () => createTransactionManager(dbClientToken),
+                    inject: [adapterClassToken, dbClientToken],
+                    useFactory: (adapterClass: VSRepoAdapterConstructor, dbClient: unknown) =>
+                        createTransactionManager(dbClientToken, adapterClass, dbClient),
                 },
             ],
             exports: [
@@ -212,7 +214,9 @@ export class VSRepositoryModule {
             },
             {
                 provide: transactionManagerToken,
-                useFactory: () => createTransactionManager(dbClientToken),
+                inject: [adapterClassToken, dbClientToken],
+                useFactory: (adapterClass: VSRepoAdapterConstructor, dbClient: unknown) =>
+                    createTransactionManager(dbClientToken, adapterClass, dbClient),
             },
         );
 

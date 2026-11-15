@@ -14,6 +14,9 @@ import { getDbClientToken } from "./utils.js";
  * - The method becomes asynchronous. Work left running after it returns (promises that are not
  *   awaited) would use a transaction that already ended.
  * - Only the repositories of the context take part. A db client used directly doesn't.
+ * - The transaction is opened with the static `execInTransaction()` of the adapter class, so the
+ *   adapter of the context must implement it: otherwise the method throws an error explaining it,
+ *   without running.
  *
  * @param options `isolationLevel` and `timeoutMs` of the transaction, and the `contextName` it runs
  * in. They are ignored when the method joins a transaction that is already active.
@@ -22,7 +25,7 @@ import { getDbClientToken } from "./utils.js";
  * ```typescript
  * *@Transactional({ isolationLevel: VSRepoIsolationLevel.SERIALIZABLE })
  * async checkout(dto: CheckoutDto) {
- *     const order = await this.ordersRepository.create(dto.order, { select: { id: true } });
+ *     const order = await this.ordersRepository.create(dto.order);
  *     await this.itemsRepository.createMany(dto.items.map(item => ({ ...item, orderId: order.id })));
  * }
  * ```

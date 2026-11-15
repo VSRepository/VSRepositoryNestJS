@@ -1,4 +1,4 @@
-import type { VSRepoAdapter, VSRepoTransactionOptions } from "vsrepo";
+import type { VSRepoAdapter, VSRepoAdapterConstructor, VSRepoTransactionOptions } from "vsrepo";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { OnModuleDestroy } from "@nestjs/common";
 
@@ -38,18 +38,28 @@ export function getTransactionManager(key: string | symbol): VSRepoTransactionMa
  * `adapter.getDbClient()` whenever the call doesn't pass one, so the adapters of the context are
  * patched (`attach`) to return the active transaction client while a scope is open.
  *
+ * The transaction itself is opened by the static `execInTransaction()` of the adapter class, straight
+ * from the context's db client, so no adapter instance is needed. That hook is optional in
+ * `VSRepoAdapter`, but `run()` (and so `@Transactional`) requires it and throws an error explaining it
+ * when the adapter doesn't implement it.
+ *
  * There is one per context, created by `VSRepositoryModule.forRoot()`/`forRootAsync()` and injected
  * with `@InjectTransactionManager()`.
  *
  * @publicApi
  */
 export class VSRepoTransactionManager implements OnModuleDestroy {
-    private runRaw?: VSRepoAdapter["runInTransaction"];
-
     /**
      * @param key Token of the context's db client (see `getDbClientToken`), which identifies the context.
+     * @param adapterClass Adapter class of the context. `run()` opens the transactions with its static
+     * `execInTransaction()`.
+     * @param dbClient Db client of the context, handed to `adapterClass.execInTransaction()`.
      */
-    constructor(readonly key: string | symbol) {}
+    constructor(
+        readonly key: string | symbol,
+        private readonly adapterClass: VSRepoAdapterConstructor,
+        private readonly dbClient: unknown,
+    ) {}
 
     /**
      * The transaction client active in the current async flow for this context, if any.
@@ -66,17 +76,13 @@ export class VSRepoTransactionManager implements OnModuleDestroy {
      * transaction instead of opening another one. Outside a scope nothing changes.
      *
      * `VSRepositoryModule.forFeature()` calls it for every adapter it creates; call it yourself only
-     * for an adapter you instantiate by hand. The first adapter attached is also the one that opens
-     * the transactions of `run()`, so `run()` needs at least one.
+     * for an adapter you instantiate by hand.
      *
      * @param adapter Adapter of this context.
      */
     attach(adapter: VSRepoAdapter): void {
         const rawGetDbClient = adapter.getDbClient.bind(adapter);
         const rawRunInTransaction = adapter.runInTransaction.bind(adapter);
-
-        // every adapter of a context shares the same client, so any of them can open the transaction
-        this.runRaw ??= rawRunInTransaction;
 
         adapter.getDbClient = () => this.current() ?? rawGetDbClient();
         adapter.runInTransaction = ((fn, options) => {
@@ -90,8 +96,13 @@ export class VSRepoTransactionManager implements OnModuleDestroy {
      * part in it (`options` are ignored, since the transaction already exists). The transaction
      * commits when `fn` resolves and rolls back when it throws.
      *
+     * A new transaction is opened with the static `execInTransaction()` of the adapter class, which
+     * works even before any `forFeature`.
+     *
      * @param fn Code to run in the transaction. Repositories of the context use it automatically.
      * @param options Isolation level and timeout of a new transaction.
+     * @throws {Error} When the adapter class doesn't implement the static `execInTransaction()`, and
+     * `fn` is not run.
      *
      * @example
      * ```typescript
@@ -104,21 +115,27 @@ export class VSRepoTransactionManager implements OnModuleDestroy {
     async run<R>(fn: () => R | Promise<R>, options?: VSRepoTransactionOptions): Promise<R> {
         if (this.current() !== undefined) return fn();
 
-        if (!this.runRaw) {
+        if (!this.adapterClass.execInTransaction) {
             throw new Error(
-                "No repository is registered in this context yet. Import VSRepositoryModule.forFeature() in a module before using @Transactional.",
+                `The adapter ${this.adapterClass.name || "of this context"} doesn't implement the static execInTransaction(), ` +
+                    "which @Transactional and VSRepoTransactionManager.run() use to open transactions. " +
+                    "Use an adapter that implements it (e.g. @vsrepo/prisma7-adapter).",
             );
         }
 
         const outer = transactionStorage.getStore();
 
-        return this.runRaw(tx => {
-            const scope = new Map(outer);
-            scope.set(this.key, tx);
+        // returned (not awaited here) so the transaction only ends when `fn` does
+        return this.adapterClass.execInTransaction(
+            this.dbClient,
+            tx => {
+                const scope = new Map(outer);
+                scope.set(this.key, tx);
 
-            // returned (not awaited here) so the transaction only ends when `fn` does
-            return transactionStorage.run(scope, async () => fn());
-        }, options);
+                return transactionStorage.run(scope, async () => fn());
+            },
+            options,
+        );
     }
 
     /**
@@ -129,8 +146,12 @@ export class VSRepoTransactionManager implements OnModuleDestroy {
     }
 }
 
-export function createTransactionManager(key: string | symbol): VSRepoTransactionManager {
-    const manager = new VSRepoTransactionManager(key);
+export function createTransactionManager(
+    key: string | symbol,
+    adapterClass: VSRepoAdapterConstructor,
+    dbClient: unknown,
+): VSRepoTransactionManager {
+    const manager = new VSRepoTransactionManager(key, adapterClass, dbClient);
     registerTransactionManager(manager);
     return manager;
 }

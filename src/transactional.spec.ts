@@ -42,6 +42,10 @@ class FakeAdapter {
         _config: object,
     ) {}
 
+    static execInTransaction<R>(db: FakeDb, fn: (tx: FakeTx) => Promise<R>): Promise<R> {
+        return db.transaction(fn);
+    }
+
     getPkName() {
         return "id";
     }

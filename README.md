@@ -251,7 +251,11 @@ export class AppModule {}
 @Module({
     imports: [
         VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }),
-        VSRepositoryModule.forFeature<Prisma7Adapter<UserReporting>>("User", { modelName: "user", pkName: "id" }, "reporting"),
+        VSRepositoryModule.forFeature<Prisma7Adapter<UserReporting>>(
+            "User",
+            { modelName: "user", pkName: "id" },
+            "reporting",
+        ),
     ],
     providers: [UserRepository, ReportingUserRepository],
 })
@@ -304,6 +308,8 @@ Options: `isolationLevel` and `timeoutMs` (the usual `VSRepoTransactionOptions`)
 
 The core fills `options.db` with `adapter.getDbClient()` whenever a call doesn't pass one. `forFeature` makes every adapter it creates transaction-aware: inside a `@Transactional` scope, `getDbClient()` returns the transaction client, and `runInTransaction()` (that is, `repository.transaction()`) joins the active transaction instead of opening another. The active transaction is tracked per async flow with `AsyncLocalStorage`, so concurrent requests never share one. Nothing changes outside a scope.
 
+The transaction itself is opened by the adapter class's static `execInTransaction(dbClient, fn, options)`, straight from the db client of the context, so no adapter instance (and no `forFeature`) is needed. It is an optional hook of `VSRepoAdapter` (the Prisma 7 adapter implements it): `@Transactional` and `manager.run()` require it, and throw an error explaining it when the adapter doesn't have it.
+
 An explicit `db` always wins over the active transaction: `{ db: prisma }` runs outside of it, on purpose.
 
 ### Nesting and joining
@@ -320,7 +326,7 @@ An explicit `db` always wins over the active transaction: `{ db: prisma }` runs 
 - **The method becomes asynchronous.** A synchronous method decorated with `@Transactional` returns a promise.
 - **Don't leave work running.** Promises that aren't awaited and keep running after the method returns would use a transaction that has already ended.
 - **Only repositories take part.** A db client used directly (e.g. `prisma.user.findMany()`) doesn't. Read the transaction with `VSRepoTransactionManager.current()` if you need it.
-- **A context needs a `forFeature` first.** The transaction is opened through the adapters registered by `forFeature`, so `@Transactional` (and `manager.run()`) throw until the context has at least one.
+- **The adapter must implement `execInTransaction`.** When the adapter class doesn't have the static hook, `@Transactional` and `manager.run()` throw an error explaining it, without running the method. Everything else in the module, `repository.transaction()` included, works with any adapter.
 - **Timeouts are the ORM's.** Without `timeoutMs`, the ORM's default applies (Prisma interactive transactions default to 5 seconds).
 - **It works with other Nest decorators.** `@Transactional()` keeps the metadata that decorators like `@Get()` or `@UseGuards()` put on the method.
 
@@ -367,8 +373,9 @@ export class ImportService {
 
 - Node.js `>=22`
 - `@nestjs/common` and `@nestjs/core` `^11.0.5 || ^12.0.0`
-- `vsrepo` `^3.0.0-dev.4`
+- `vsrepo` `^3.0.0-dev.5`
 - An adapter for your database, such as [`@vsrepo/prisma7-adapter`](https://github.com/VSRepository/VSRepoPrisma7Adapter)
+- To use `@Transactional`, an adapter that implements the static `execInTransaction` (the Prisma 7 adapter does)
 - `experimentalDecorators` enabled in your `tsconfig.json`
 
 ## License
