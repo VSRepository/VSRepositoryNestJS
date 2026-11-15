@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [0.1.0] - 2026-11-14
+## [Unreleased]
 
 First release of `@vsrepo/nestjs`, the NestJS module for [VSRepository v3](https://github.com/VSRepository/VSRepository).
 
@@ -23,7 +23,7 @@ First release of `@vsrepo/nestjs`, the NestJS module for [VSRepository v3](https
 
 ---
 
-## [0.1.0] - 2026-11-14 (Português)
+## [Unreleased] (Português)
 
 Primeira release do `@vsrepo/nestjs`, o módulo NestJS do [VSRepository v3](https://github.com/VSRepository/VSRepository).
 

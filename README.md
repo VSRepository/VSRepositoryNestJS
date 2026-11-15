@@ -80,7 +80,7 @@ Provide the adapter of each entity in the module that owns it:
 
 ```typescript
 @Module({
-    imports: [VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" })],
+    imports: [VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" })],
     providers: [UserRepository, UserService],
 })
 export class UserModule {}
@@ -156,16 +156,28 @@ With `useClass`/`useExisting`, the class implements `VSRepositoryOptionsFactory`
 
 ```typescript
 // named: one adapter per entity, injected with @InjectAdapter("User")
-VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" });
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" });
 
 // named, in a non-default context
-VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting");
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }, "reporting");
 
 // unnamed: a single adapter for the module, injected as VSRepoAdapter
-VSRepositoryModule.forFeature({ modelName: "user", pkName: "id" });
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" });
 ```
 
 The `config` is the adapter's own constructor config. The unnamed form is a shortcut for modules with a single entity. A module can have only one unnamed adapter, so use named ones when it has several entities.
+
+#### The generic
+
+The type argument is the **adapter type**: the same class registered in `forRoot`. It exists to type `config`.
+
+```typescript
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" });
+```
+
+The generic is **compile-time only**: at runtime the adapter class still comes from `forRoot`, and `config` is passed through unchanged. It works with the unnamed form too: `forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" })`.
+
+If you omit it, TypeScript falls back to the constraint, `VSRepoAdapter`, whose `configType` is `any`.
 
 ## Repositories
 
@@ -238,8 +250,8 @@ export class AppModule {}
 
 @Module({
     imports: [
-        VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }),
-        VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting"),
+        VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }),
+        VSRepositoryModule.forFeature<Prisma7Adapter<UserReporting>>("User", { modelName: "user", pkName: "id" }, "reporting"),
     ],
     providers: [UserRepository, ReportingUserRepository],
 })

@@ -32,7 +32,7 @@ import {
  * export class AppModule {}
  *
  * *@Module({
- *     imports: [VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" })],
+ *     imports: [VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" })],
  *     providers: [UserRepository],
  * })
  * export class UserModule {}
@@ -243,7 +243,10 @@ export class VSRepositoryModule {
      *
      * @publicApi
      */
-    static forFeature<T extends object>(config: T, contextName?: string): DynamicModule;
+    static forFeature<T extends VSRepoAdapter>(
+        config: NonNullable<T["configType"]>,
+        contextName?: string,
+    ): DynamicModule;
     /**
      * Provides the adapter of an entity under its name, to inject with `@InjectAdapter(entityName)`.
      * A module can provide several, one per entity.
@@ -257,15 +260,19 @@ export class VSRepositoryModule {
      *
      * @example
      * ```typescript
-     * VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting")
+     * VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }, "reporting")
      * ```
      *
      * @publicApi
      */
-    static forFeature<T extends object>(entityName: string, config: T, contextName?: string): DynamicModule;
-    static forFeature<T extends object>(
-        entityNameOrConfig: string | T,
-        configOrContextName?: T | string,
+    static forFeature<T extends VSRepoAdapter>(
+        entityName: string,
+        config: NonNullable<T["configType"]>,
+        contextName?: string,
+    ): DynamicModule;
+    static forFeature<T extends VSRepoAdapter>(
+        entityNameOrConfig: string | NonNullable<T["configType"]>,
+        configOrContextName?: NonNullable<T["configType"]> | string,
         contextName?: string,
     ): DynamicModule {
         const providers: Provider[] = [];

@@ -80,7 +80,7 @@ Forneça o adapter de cada entidade no módulo que é dono dela:
 
 ```typescript
 @Module({
-    imports: [VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" })],
+    imports: [VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" })],
     providers: [UserRepository, UserService],
 })
 export class UserModule {}
@@ -156,16 +156,28 @@ O `forFeature` fornece o adapter de uma entidade. O adapter é criado com o db c
 
 ```typescript
 // nomeado: um adapter por entidade, injetado com @InjectAdapter("User")
-VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" });
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" });
 
 // nomeado, em um contexto que não é o padrão
-VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting");
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }, "reporting");
 
 // sem nome: um único adapter para o módulo, injetado como VSRepoAdapter
-VSRepositoryModule.forFeature({ modelName: "user", pkName: "id" });
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" });
 ```
 
 O `config` é a config do construtor do próprio adapter. A forma sem nome é um atalho para módulos com uma única entidade. Um módulo só pode ter um adapter sem nome, então use os nomeados quando houver várias entidades.
+
+#### A generic
+
+O argumento de tipo é o **tipo do adapter**: a mesma classe registrada no `forRoot`. Ele existe para tipar o `config`.
+
+```typescript
+VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" });
+```
+
+A generic é **só de compilação**: em runtime a classe do adapter continua vindo do `forRoot`, e o `config` é repassado sem alteração. Ele também funciona na forma sem nome: `forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" })`.
+
+Se você omitir, o TypeScript cai na restrição, `VSRepoAdapter`, cujo `configType` é `any`.
 
 ## Repositories
 
@@ -238,8 +250,8 @@ export class AppModule {}
 
 @Module({
     imports: [
-        VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }),
-        VSRepositoryModule.forFeature("User", { modelName: "user", pkName: "id" }, "reporting"),
+        VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }),
+        VSRepositoryModule.forFeature<Prisma7Adapter<UserReporting>>("User", { modelName: "user", pkName: "id" }, "reporting"),
     ],
     providers: [UserRepository, ReportingUserRepository],
 })
