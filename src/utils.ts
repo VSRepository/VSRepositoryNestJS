@@ -23,8 +23,9 @@ export function getAdapterToken(entityName: string, contextName?: string): strin
  *
  * @publicApi
  */
-export const InjectAdapter = (entityName: string, contextName?: string) =>
-    Inject(getAdapterToken(entityName, contextName));
+export function InjectAdapter(entityName: string, contextName?: string) {
+    return Inject(getAdapterToken(entityName, contextName));
+}
 
 /**
  * Returns the injection token of the adapter **class** registered by
@@ -32,7 +33,7 @@ export const InjectAdapter = (entityName: string, contextName?: string) =>
  *
  * @param contextName Context to look up. Omit it for the default context.
  *
- * @publicApi
+ * @internal
  */
 export function getAdapterClassToken(contextName?: string): string | symbol {
     return contextName ? `VSRepoAdapterClass(${contextName})` : ADAPTER_CLASS;
@@ -44,7 +45,7 @@ export function getAdapterClassToken(contextName?: string): string | symbol {
  *
  * @param contextName Context to look up. Omit it for the default context.
  *
- * @publicApi
+ * @internal
  */
 export function getVSRepoModuleOptionsToken(contextName?: string): string | symbol {
     return contextName ? `VSRepoModuleOptions(${contextName})` : MODULE_OPTIONS;
@@ -68,7 +69,9 @@ export function getDbClientToken(contextName?: string): string | symbol {
  *
  * @publicApi
  */
-export const InjectDbClient = (contextName?: string) => Inject(getDbClientToken(contextName));
+export function InjectDbClient(contextName?: string) {
+    return Inject(getDbClientToken(contextName));
+}
 
 /**
  * Returns the injection token of the `VSRepository` config of a context (a `VSRepoGlobalConfig`).
@@ -90,7 +93,9 @@ export function getVSRepoConfigToken(contextName?: string): string | symbol {
  *
  * @publicApi
  */
-export const InjectVSRepoConfig = (contextName?: string) => Inject(getVSRepoConfigToken(contextName));
+export function InjectVSRepoConfig(contextName?: string) {
+    return Inject(getVSRepoConfigToken(contextName));
+}
 
 /**
  * Returns the injection token of the `VSRepoTransactionManager` of a context.
@@ -111,4 +116,6 @@ export function getTransactionManagerToken(contextName?: string): string | symbo
  *
  * @publicApi
  */
-export const InjectTransactionManager = (contextName?: string) => Inject(getTransactionManagerToken(contextName));
+export function InjectTransactionManager(contextName?: string) {
+    return Inject(getTransactionManagerToken(contextName));
+}

@@ -364,8 +364,6 @@ export class ImportService {
 | `@InjectDbClient(ctx?)`           | O db client passado ao `forRoot`                             | `getDbClientToken(ctx?)`            |
 | `@InjectVSRepoConfig(ctx?)`       | O `VSRepoGlobalConfig` montado a partir das opções do módulo | `getVSRepoConfigToken(ctx?)`        |
 | `@InjectTransactionManager(ctx?)` | O `VSRepoTransactionManager` do contexto                     | `getTransactionManagerToken(ctx?)`  |
-| —                                 | A classe do adapter                                          | `getAdapterClassToken(ctx?)`        |
-| —                                 | As opções do contexto (inclui o `dbClient`)                  | `getVSRepoModuleOptionsToken(ctx?)` |
 
 `ctx` é o `contextName`; omita para o contexto padrão. Os tokens do contexto padrão são symbols, e os dos contextos nomeados são strings.
 
