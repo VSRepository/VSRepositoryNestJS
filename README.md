@@ -161,11 +161,11 @@ VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user",
 // named, in a non-default context
 VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }, "reporting");
 
-// unnamed: a single adapter for the module, injected as VSRepoAdapter
+// unnamed: a single adapter for the module, injected with @InjectAdapter()
 VSRepositoryModule.forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" });
 ```
 
-The `config` is the adapter's own constructor config. The unnamed form is a shortcut for modules with a single entity. A module can have only one unnamed adapter, so use named ones when it has several entities.
+The `config` is the adapter's own constructor config. The unnamed form is a shortcut for modules with a single entity; inject it with `@InjectAdapter()` (or as `VSRepoAdapter`). A module can have only one unnamed adapter, so use named ones when it has several entities.
 
 #### The generic
 
@@ -338,7 +338,7 @@ Each context has a manager, created by `forRoot`/`forRootAsync`, for the cases w
 @Injectable()
 export class ImportService {
     constructor(
-        @InjectTransactionManager() private readonly transactionManager: VSRepoTransactionManager,
+        private readonly transactionManager: VSRepoTransactionManager,
         private readonly userRepository: UserRepository,
     ) {}
 
@@ -350,6 +350,8 @@ export class ImportService {
 }
 ```
 
+In the default context the manager is provided under the `VSRepoTransactionManager` class itself, so it can be injected by type. For a named context, use `@InjectTransactionManager("context")`.
+
 | Member              | Description                                                                                                 |
 | ------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `run(fn, options?)` | Runs `fn` in a transaction (or joins the active one) and returns what it returns.                           |
@@ -358,14 +360,14 @@ export class ImportService {
 
 ## Injection helpers
 
-| Decorator                         | Injects                                                   | Token function                      |
-| --------------------------------- | --------------------------------------------------------- | ----------------------------------- |
-| `@InjectAdapter(entity, ctx?)`    | The adapter of an entity (from `forFeature(entity, ...)`) | `getAdapterToken(entity, ctx?)`     |
-| `@InjectDbClient(ctx?)`           | The db client given to `forRoot`                          | `getDbClientToken(ctx?)`            |
-| `@InjectVSRepoConfig(ctx?)`       | The `VSRepoGlobalConfig` built from the module options    | `getVSRepoConfigToken(ctx?)`        |
-| `@InjectTransactionManager(ctx?)` | The `VSRepoTransactionManager` of the context             | `getTransactionManagerToken(ctx?)`  |
+| Decorator                         | Injects                                                                   | Token function                     |
+| --------------------------------- | ------------------------------------------------------------------------- | ---------------------------------- |
+| `@InjectAdapter(entity?, ctx?)`   | The adapter of an entity, or the unnamed adapter when `entity` is omitted | `getAdapterToken(entity?, ctx?)`   |
+| `@InjectDbClient(ctx?)`           | The db client given to `forRoot`                                          | `getDbClientToken(ctx?)`           |
+| `@InjectVSRepoConfig(ctx?)`       | The `VSRepoGlobalConfig` built from the module options                    | `getVSRepoConfigToken(ctx?)`       |
+| `@InjectTransactionManager(ctx?)` | The `VSRepoTransactionManager` of the context                             | `getTransactionManagerToken(ctx?)` |
 
-`ctx` is the `contextName`; omit it for the default context. Tokens of the default context are symbols, and tokens of named contexts are strings.
+`ctx` is the `contextName`; omit it for the default context.
 
 ## Requirements
 

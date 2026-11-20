@@ -161,11 +161,11 @@ VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user",
 // nomeado, em um contexto que não é o padrão
 VSRepositoryModule.forFeature<Prisma7Adapter<User>>("User", { modelName: "user", pkName: "id" }, "reporting");
 
-// sem nome: um único adapter para o módulo, injetado como VSRepoAdapter
+// sem nome: um único adapter para o módulo, injetado com @InjectAdapter()
 VSRepositoryModule.forFeature<Prisma7Adapter<User>>({ modelName: "user", pkName: "id" });
 ```
 
-O `config` é a config do construtor do próprio adapter. A forma sem nome é um atalho para módulos com uma única entidade. Um módulo só pode ter um adapter sem nome, então use os nomeados quando houver várias entidades.
+O `config` é a config do construtor do próprio adapter. A forma sem nome é um atalho para módulos com uma única entidade; injete-a com `@InjectAdapter()` (ou como `VSRepoAdapter`). Um módulo só pode ter um adapter sem nome, então use os nomeados quando houver várias entidades.
 
 #### A generic
 
@@ -338,7 +338,7 @@ Cada contexto tem um manager, criado pelo `forRoot`/`forRootAsync`, para os caso
 @Injectable()
 export class ImportService {
     constructor(
-        @InjectTransactionManager() private readonly transactionManager: VSRepoTransactionManager,
+        private readonly transactionManager: VSRepoTransactionManager,
         private readonly userRepository: UserRepository,
     ) {}
 
@@ -350,6 +350,8 @@ export class ImportService {
 }
 ```
 
+No contexto padrão o manager é fornecido sob a própria classe `VSRepoTransactionManager`, então pode ser injetado pelo tipo. Para um contexto nomeado, use `@InjectTransactionManager("context")`.
+
 | Membro              | Descrição                                                                                                |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | `run(fn, options?)` | Executa `fn` em uma transação (ou participa da ativa) e devolve o que ela retorna.                       |
@@ -358,14 +360,14 @@ export class ImportService {
 
 ## Helpers de injeção
 
-| Decorator                         | Injeta                                                       | Função do token                     |
-| --------------------------------- | ------------------------------------------------------------ | ----------------------------------- |
-| `@InjectAdapter(entity, ctx?)`    | O adapter de uma entidade (do `forFeature(entity, ...)`)     | `getAdapterToken(entity, ctx?)`     |
-| `@InjectDbClient(ctx?)`           | O db client passado ao `forRoot`                             | `getDbClientToken(ctx?)`            |
-| `@InjectVSRepoConfig(ctx?)`       | O `VSRepoGlobalConfig` montado a partir das opções do módulo | `getVSRepoConfigToken(ctx?)`        |
-| `@InjectTransactionManager(ctx?)` | O `VSRepoTransactionManager` do contexto                     | `getTransactionManagerToken(ctx?)`  |
+| Decorator                         | Injeta                                                                     | Função do token                    |
+| --------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
+| `@InjectAdapter(entity?, ctx?)`   | O adapter de uma entidade, ou o adapter sem nome quando `entity` é omitido | `getAdapterToken(entity?, ctx?)`   |
+| `@InjectDbClient(ctx?)`           | O db client passado ao `forRoot`                                           | `getDbClientToken(ctx?)`           |
+| `@InjectVSRepoConfig(ctx?)`       | O `VSRepoGlobalConfig` montado a partir das opções do módulo               | `getVSRepoConfigToken(ctx?)`       |
+| `@InjectTransactionManager(ctx?)` | O `VSRepoTransactionManager` do contexto                                   | `getTransactionManagerToken(ctx?)` |
 
-`ctx` é o `contextName`; omita para o contexto padrão. Os tokens do contexto padrão são symbols, e os dos contextos nomeados são strings.
+`ctx` é o `contextName`; omita para o contexto padrão.
 
 ## Requisitos
 

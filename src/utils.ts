@@ -1,19 +1,30 @@
 import { Inject } from "@nestjs/common";
-import { ADAPTER_CLASS, DB_CLIENT, MODULE_OPTIONS, TRANSACTION_MANAGER, VSREPO_CONFIG } from "./constants.js";
+import { ADAPTER_CLASS, DB_CLIENT, MODULE_OPTIONS, VSREPO_CONFIG } from "./constants.js";
+import { VSRepoTransactionManager } from "./transaction-manager.js";
+import { VSRepoAdapter } from "vsrepo";
 
 /**
- * Returns the injection token of the adapter that `VSRepositoryModule.forFeature()` provides for
- * an entity.
+ * Returns the injection token of the adapter that `VSRepositoryModule.forFeature()` provides. With
+ * an `entityName` it is the token of that named adapter; without it, the `VSRepoAdapter` class,
+ * which is the token of the unnamed adapter.
  *
- * @param entityName Name given to the entity in `forFeature(entityName, config)`.
+ * @param entityName Name given to the entity in `forFeature(entityName, config)`. Omit it to get
+ * the unnamed adapter's token.
  * @param contextName Context the adapter belongs to. Omit it for the default context.
  *
  * @publicApi
  */
-export function getAdapterToken(entityName: string, contextName?: string): string {
-    return `VSRepoAdapter(${entityName}${contextName ? `:${contextName}` : ""})`;
+export function getAdapterToken(entityName?: string, contextName?: string): string | typeof VSRepoAdapter {
+    return entityName ? `VSRepoAdapter(${entityName}${contextName ? `:${contextName}` : ""})` : VSRepoAdapter;
 }
 
+/**
+ * Parameter decorator that injects the **unnamed** adapter of the module, provided by
+ * `VSRepositoryModule.forFeature(config)` (the `VSRepoAdapter` token).
+ *
+ * @publicApi
+ */
+export function InjectAdapter(): ReturnType<typeof Inject>;
 /**
  * Parameter decorator that injects the adapter of an entity, as provided by
  * `VSRepositoryModule.forFeature(entityName, config, contextName)`.
@@ -23,7 +34,8 @@ export function getAdapterToken(entityName: string, contextName?: string): strin
  *
  * @publicApi
  */
-export function InjectAdapter(entityName: string, contextName?: string) {
+export function InjectAdapter(entityName: string, contextName?: string): ReturnType<typeof Inject>;
+export function InjectAdapter(entityName?: string, contextName?: string) {
     return Inject(getAdapterToken(entityName, contextName));
 }
 
@@ -98,19 +110,23 @@ export function InjectVSRepoConfig(contextName?: string) {
 }
 
 /**
- * Returns the injection token of the `VSRepoTransactionManager` of a context.
+ * Returns the injection token of the `VSRepoTransactionManager` of a context. The default context
+ * uses the `VSRepoTransactionManager` class itself as the token; a named context uses a string.
  *
  * @param contextName Context to look up. Omit it for the default context.
  *
  * @publicApi
  */
-export function getTransactionManagerToken(contextName?: string): string | symbol {
-    return contextName ? `VSRepoTransactionManager(${contextName})` : TRANSACTION_MANAGER;
+export function getTransactionManagerToken(contextName?: string): string | typeof VSRepoTransactionManager {
+    return contextName ? `VSRepoTransactionManager(${contextName})` : VSRepoTransactionManager;
 }
 
 /**
  * Parameter decorator that injects the `VSRepoTransactionManager` of a context, to open a
  * transaction in code (`manager.run()`) or to read the active one (`manager.current()`).
+ *
+ * In the default context it is equivalent to `@Inject(VSRepoTransactionManager)`; use it with a
+ * `contextName` to inject the manager of a named context.
  *
  * @param contextName Context to look up. Omit it for the default context.
  *

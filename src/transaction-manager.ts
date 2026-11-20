@@ -43,8 +43,9 @@ export function getTransactionManager(key: string | symbol): VSRepoTransactionMa
  * `VSRepoAdapter`, but `run()` (and so `@Transactional`) requires it and throws an error explaining it
  * when the adapter doesn't implement it.
  *
- * There is one per context, created by `VSRepositoryModule.forRoot()`/`forRootAsync()` and injected
- * with `@InjectTransactionManager()`.
+ * There is one per context, created by `VSRepositoryModule.forRoot()`/`forRootAsync()`. In the default
+ * context it is provided under this class itself, so it can be injected by type; for a named context use
+ * `@InjectTransactionManager(contextName)`.
  *
  * @publicApi
  */

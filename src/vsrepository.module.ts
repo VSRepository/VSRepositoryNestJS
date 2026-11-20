@@ -236,8 +236,9 @@ export class VSRepositoryModule {
     }
 
     /**
-     * Provides the **unnamed** adapter of the module, to inject with `VSRepoAdapter`. A module
-     * can have only one: use `forFeature(entityName, config)` for modules with several entities.
+     * Provides the **unnamed** adapter of the module, to inject with `@InjectAdapter()` or as
+     * `VSRepoAdapter`. A module can have only one: use `forFeature(entityName, config)` for modules
+     * with several entities.
      *
      * The adapter is created with the db client of the context and is transaction-aware, so
      * `@Transactional()` works with the repositories that use it.

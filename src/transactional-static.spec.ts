@@ -3,7 +3,7 @@ import { DynamicModule, Inject, Injectable, Module, Optional, Type } from "@nest
 import { NestFactory } from "@nestjs/core";
 import { Prisma7Adapter } from "@vsrepo/prisma7-adapter";
 import { VSLogLevel, VSRepoIsolationLevel, VSRepository, type VSRepoAdapterConstructor } from "vsrepo";
-import type { VSRepoTransactionManager } from "./transaction-manager.js";
+import { VSRepoTransactionManager } from "./transaction-manager.js";
 import { Transactional } from "./transactional.decorator.js";
 import { InjectAdapter, InjectTransactionManager } from "./utils.js";
 import { VSRepositoryModule } from "./vsrepository.module.js";
@@ -89,7 +89,7 @@ class UserRepository extends VSRepository<User, string> {
 @Injectable()
 class PlainService {
     constructor(
-        @InjectTransactionManager() readonly manager: VSRepoTransactionManager,
+        @Inject(VSRepoTransactionManager) readonly manager: VSRepoTransactionManager,
         @Optional() @InjectTransactionManager("other") readonly other?: VSRepoTransactionManager,
     ) {}
 
